@@ -16,13 +16,16 @@ class Context:
         self.textures = []
 
         backend_os = platform.system()
+
         if backend_os in GL_BACKENDS:
             self.ctx = moderngl.create_context(
                 standalone=True,
                 backend=GL_BACKENDS[backend_os],
             )
         else:
-            self.ctx = moderngl.create_standalone_context()
+            self.ctx = moderngl.create_context(
+                standalone=True,
+            )
 
         # add first define
         if backend_os in GL_PLATFORMS:
@@ -30,7 +33,7 @@ class Context:
         
 
     def loadTexture(self, name, image):
-        if len(image) is 1:
+        if len(image) == 1:
             tex = ImageTexture(image.contiguous().cpu().numpy()[0], name)
             self.textures.append( tex )
             self.uniforms[f"{name}Resolution"] = (float(tex.width), float(tex.height))

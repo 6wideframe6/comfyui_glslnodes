@@ -10,6 +10,24 @@ from .glsl_context import Context
 from .glsl_buffers import Buffer, DoubleBuffer
 from .glsl_utils import getSizeFromCode
 
+def make_context_from_uniforms_payload(uniforms_payload):
+    context = Context()
+
+    if uniforms_payload is None:
+        return context
+
+    if isinstance(uniforms_payload, dict) and uniforms_payload.get("__glsl_uniform_payload__"):
+        context.loadTextures(uniforms_payload.get("textures", {}))
+        context.loadUniforms(uniforms_payload.get("values", {}))
+        return context
+
+    # Legacy fallback:
+    # If some old workflow still sends a real Context object, use it.
+    # But after patching glsl_uniforms.py this should not be the normal path.
+    if isinstance(uniforms_payload, Context):
+        return uniforms_payload
+
+    return context
 
 class GlslViewer:
     @classmethod
@@ -45,7 +63,7 @@ class GlslViewer:
     def main(self, fragment_code:dict, width:int, height:int, frames:int, fps:int, **kwargs):
         # print("Optional Inputs", kwargs.keys())
 
-        context = None
+        uniforms_payload = None
         geometry = None
         vertex_code = None
         images_in = {}
@@ -53,15 +71,16 @@ class GlslViewer:
 
         for key, value in kwargs.items():
             if key.startswith("uniforms"):
-                context = value
+                uniforms_payload = value
             elif key.startswith("u_tex"):
                 images_in[key] = value
             elif key.startswith("u_val"):
                 values_in[key] = value
 
-        if context is None:
-            context = Context()
+        context = make_context_from_uniforms_payload(uniforms_payload)
 
+        # Direct viewer inputs still work.
+        # These are loaded after the uniforms payload so direct inputs can override/add.
         context.loadTextures(images_in)
         context.loadUniforms(values_in)
 
